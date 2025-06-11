@@ -23,7 +23,7 @@ for filename in os.listdir(countries_path[0]):
 
 
 sending_countries = ['United Kingdom', 'Germany' ,'France', 'Spain', 'United States', 'Canada', 'Australia' ]
-time_period = 3
+time_period = 1
 
 def run_scraper(country_module, country_name):
 
