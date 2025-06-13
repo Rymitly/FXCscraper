@@ -1,14 +1,12 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
-import os
-
 
 from scraper_utils import login_to_fxc
 
 import os
 import importlib
-from countries import __path__ as countries_path, india_scraper, colombia_scraper, kenya_scraper, zimbabwe_scraper
+from countries import __path__ as countries_path
 
 # Get all scraper files in the countries/ folder
 country_modules = []
@@ -21,13 +19,13 @@ for filename in os.listdir(countries_path[0]):
         country_modules.append((module, pretty_name))
 
 
-
-sending_countries = ['United Kingdom', 'Germany' ,'France', 'Spain', 'United States', 'Canada', 'Australia' ]
-time_period = 1
+sending_countries = ['United Kingdom']
+# sending_countries = ['United Kingdom', 'France', 'United States', 'Canada', 'Australia' ]
+time_period = 2
 
 def run_scraper(country_module, country_name):
 
-    download_dir = f"/Users/ryanwh/Documents/pricing_data/tts_tracker/{country_name}"
+    download_dir = f"/Users/ryanwh/Documents/pricing_data/tts_tracker_20250612/{country_name}"
     os.makedirs(download_dir, exist_ok=True)
 
     prefs = {
