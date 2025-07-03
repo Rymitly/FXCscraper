@@ -11,6 +11,21 @@ from datetime import datetime, timedelta
 import pandas as pd
 import time
 
+def dismiss_overlay_by_click(driver, x=10, y=10):
+    script = f"""
+    const evt = new MouseEvent('click', {{
+        bubbles: true,
+        cancelable: true,
+        view: window
+    }});
+    document.elementFromPoint({x}, {y}).dispatchEvent(evt);
+    """
+    driver.execute_script(script)
+
+
+
+
+
 
 def clear_and_type_input(input_box, value):
     input_box.click()
@@ -125,7 +140,7 @@ def select_receiving_country(driver, wait, country_name):
         # Locate input by index or context (adjust index as needed)
         inputs = wait.until(EC.presence_of_all_elements_located((By.XPATH, "//input[@type='text']")))
         print(inputs)
-        sending_country_input = inputs[2]  # Assuming index 1 = Sending Country
+        sending_country_input = inputs[2]
         time.sleep(3)
 
         print('step 1')
@@ -298,53 +313,107 @@ def select_all_options_in_dropdown(driver, wait, dropdown_aria_label):
         print(f" Failed to open or process dropdown '{dropdown_aria_label}': {e}")
 
 
+
 def set_report_date(driver, wait, date_str):
     try:
         print(f"Setting report date to: {date_str}")
 
         # Step 1: Locate all text inputs
         inputs = wait.until(EC.presence_of_all_elements_located((By.XPATH, "//input[@type='text']")))
-
-        # Step 2: Assume first input is the date field
         date_input = inputs[0]
 
-        # Step 3: Click and clear
-        date_input.click()
-        date_input.send_keys(Keys.CONTROL + "a")
-        time.sleep(0.3)
-        date_input.send_keys(Keys.DELETE)
-        time.sleep(0.3)
+        # Step 2: Ensure element is interactable
+        wait.until(EC.element_to_be_clickable(date_input))
+        driver.execute_script("arguments[0].scrollIntoView(true);", date_input)
 
-        # Step 4: Type the new date
+        # Step 3: JS click instead of native click
+        driver.execute_script("arguments[0].click();", date_input)
+
+        # Step 4: Clear and input
+        # date_input.send_keys(Keys.CONTROL + "a")
+        time.sleep(0.2)
+        # date_input.send_keys(Keys.DELETE)
+        time.sleep(0.2)
+
+        ActionChains(driver).move_to_element(date_input).double_click().perform()
         date_input.send_keys(date_str)
-        time.sleep(1)
-
-        # Step 5: Press enter to dismiss calendar if open
+        time.sleep(0.5)
         date_input.send_keys(Keys.ENTER)
+
         print("Date updated.")
-
-        # Step 6: Click neutral content area to dismiss any overlay
+        dismiss_overlay_by_click(driver)
+        # Wait for calendar arrow switcher to disappear
+        # Step 5: Wait and kill any visible backdrop
         try:
-            content_area = wait.until(EC.element_to_be_clickable((
-                By.XPATH, "//div[contains(@class, 'MuiPaper-root') and not(contains(@class,'MuiPopover-paper'))]"
-            )))
-            actions = ActionChains(driver)
-            actions.move_to_element(content_area).click().perform()
-            time.sleep(0.5)
-            print("Clicked content area to close overlay.")
-        except Exception as e:
-            print(f"Couldn't click content area: {e}")
+            wait.until(EC.invisibility_of_element_located((By.CLASS_NAME, "MuiBackdrop-root")))
 
-        # Step 7: Wait for any backdrop to disappear
-        try:
-            wait.until(EC.invisibility_of_element_located(
-                (By.CLASS_NAME, "MuiBackdrop-root")
-            ))
         except:
             print("Backdrop may still be visible.")
 
+        # Step 6: Fallback: click into body using JS to dismiss any dropdown
+        try:
+            driver.execute_script("document.body.click();")
+            print("Clicked body to close overlay.")
+            time.sleep(0.5)
+        except Exception as e:
+            print(f"Fallback body click failed: {e}")
+
     except Exception as e:
         print(f"Failed to set report date: {e}")
+
+
+
+
+
+# def set_report_date(driver, wait, date_str):
+#     try:
+#         print(f"Setting report date to: {date_str}")
+#
+#         # Step 1: Locate all text inputs
+#         inputs = wait.until(EC.presence_of_all_elements_located((By.XPATH, "//input[@type='text']")))
+#
+#         # Step 2: Assume first input is the date field
+#         date_input = inputs[0]
+#
+#         # Step 3: Click and clear
+#         date_input.click()
+#         date_input.send_keys(Keys.CONTROL + "a")
+#         time.sleep(0.3)
+#         date_input.send_keys(Keys.DELETE)
+#         time.sleep(0.3)
+#
+#         # Step 4: Type the new date
+#         date_input.send_keys(date_str)
+#         time.sleep(1)
+#
+#         # Step 5: Press enter to dismiss calendar if open
+#         date_input.send_keys(Keys.ENTER)
+#         print("Date updated.")
+#
+#         # Step 6: Click neutral content area to dismiss any overlay
+#         try:
+#             content_area = wait.until(EC.element_to_be_clickable((
+#                 By.XPATH, "//div[contains(@class, 'MuiPaper-root') and not(contains(@class,'MuiPopover-paper'))]"
+#             )))
+#             actions = ActionChains(driver)
+#             actions.move_to_element(content_area).click().perform()
+#
+#
+#             time.sleep(0.5)
+#             print("Clicked content area to close overlay.")
+#         except Exception as e:
+#             print(f"Couldn't click content area: {e}")
+#
+#         # Step 7: Wait for any backdrop to disappear
+#         try:
+#             wait.until(EC.invisibility_of_element_located(
+#                 (By.CLASS_NAME, "MuiBackdrop-root")
+#             ))
+#         except:
+#             print("Backdrop may still be visible.")
+#
+#     except Exception as e:
+#         print(f"Failed to set report date: {e}")
 
 
 def select_all_options_in_transfer_amount(driver, wait, dropdown_aria_label):
@@ -387,8 +456,12 @@ def select_all_options_in_transfer_amount(driver, wait, dropdown_aria_label):
             )))
             actions.move_to_element(content_area).click().perform()
             time.sleep(0.5)
+            driver.execute_script("arguments[0].click();", content_area)
+
             print(" Clicked content area to close dropdown.")
         except Exception as e:
+            driver.save_screenshot("debug_screenshot.png")
+
             print(f" Couldn't click content area: {e}")
 
         # Step 5: Wait for any remaining backdrop to go away
@@ -435,21 +508,80 @@ def select_all_provider_checkboxes(driver):
 
 
 
-def click_download_report(driver, wait):
+# def click_download_report(driver, wait):
+#     try:
+#         print("Clicking 'Download Report'...")
+#
+#         download_button = wait.until(EC.element_to_be_clickable((
+#             By.XPATH, "//button[contains(., 'Download Report')]"
+#         )))
+#
+#         download_button.click()
+#         print( "Download button clicked.")
+#
+#         time.sleep(5)
+#
+#     except Exception as e:
+#         print(f"Failed to click 'Download Report': {e}")
+
+
+
+# def click_select_all_report(driver, wait):
+#     try:
+#         print("Clicking 'Select All '...")
+#         time.sleep(5)
+#         report_button = wait.until(EC.element_to_be_clickable((
+#             By.XPATH, "//button[contains(., 'Select All')]"
+#         )))
+#
+#         report_button.click()
+#         print( "select button clicked.")
+#
+#         time.sleep(3)
+#
+#     except Exception as e:
+#         print(f"Failed to click ' Select All': {e}")
+
+
+
+def click_select_all_report(driver, wait):
+    time.sleep(3)
+
+    text = 'Select All'
     try:
-        print("Clicking 'Download Report'...")
+        button = wait.until(EC.element_to_be_clickable(
+            (By.XPATH, f"//button[normalize-space()='{text}']")
+        ))
+        driver.execute_script("arguments[0].scrollIntoView(true);", button)
+        driver.execute_script("arguments[0].click();", button)
+        # time.sleep(3)
 
-        download_button = wait.until(EC.element_to_be_clickable((
-            By.XPATH, "//button[contains(., 'Download Report')]"
-        )))
-
-        download_button.click()
-        print( "Download button clicked.")
-
-        time.sleep(5)
-
+        print(f"Clicked '{text}' button.")
     except Exception as e:
-        print(f"Failed to click 'Download Report': {e}")
+        print(f" Failed to click '{text}' button: {e}")
+
+
+
+def click_download_report(driver, wait):
+
+
+    text = 'Download Report'
+    try:
+        button = wait.until(EC.element_to_be_clickable(
+            (By.XPATH, f"//button[normalize-space()='{text}']")
+        ))
+        driver.execute_script("arguments[0].scrollIntoView(true);", button)
+        driver.execute_script("arguments[0].click();", button)
+        print(f" Clicked '{text}' button.")
+    except Exception as e:
+        print(f" Failed to click '{text}' button: {e}")
+
+
+
+
+
+
+
 
 
 
